@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np 
 
-import torch
 from torch.utils.data import Dataset, DataLoader
 
 import config
@@ -24,9 +23,9 @@ class IMDBDataset(Dataset):
     def __getitem__(self, idx):
         sentence = self.data_frame.review.iloc[idx]
         cls_embedding = self.bert_util.generate_cls_embedding(sentence)
-        sentiment_label = self.data_frame.sentiment.iloc[idx].upper() # global dict has enum for upper-case sentiment labels
-        sentiment_embedding = sentiment_analysis_util.get_sentiment_vector_from_label(sentiment_label)
-        return cls_embedding, sentiment_embedding
+        word_embeddings = self.bert_util.generate_word_embeddings(sentence)
+        sentiment_embedding = self.sentiment_analysis_util.get_sentiment_vector(sentence)
+        return cls_embedding, word_embeddings, sentiment_embedding
 
 if __name__ == "__main__":
     bert_util = BertUtil()
@@ -35,9 +34,11 @@ if __name__ == "__main__":
     dataset = IMDBDataset(bert_util=bert_util, sentiment_analysis_util=sentiment_analysis_util)
     dataloader = DataLoader(dataset, batch_size=config.batch_size)
     
-    cls_embedding, sentiment_embedding = next(iter(dataloader))
+    cls_embedding, word_embeddings, sentiment_embedding = next(iter(dataloader))
     
-    print(cls_embedding.shape)
-    # shape(cls_embedding) = [batch_size, 1, hidden_dim]
-    print(sentiment_embedding.shape)
-    # shape(sentiment_embedding) = [batch_size, 1, len(config.SENTIMENTS)] = [batch_size, 1, 2]
+    print('cls_embedding.shape', cls_embedding.shape)
+    # shape(cls_embedding) = [batch_size, hidden_dim]
+    print('word_embeddings.shape', word_embeddings.shape)
+    # shape(word_embeddings) = [batch_size, seq_len, hidden_dim]
+    print('sentiment_embedding.shape', sentiment_embedding.shape)
+    # shape(sentiment_embedding) = [batch_size, len(config.SENTIMENTS)] = [batch_size, 2]
