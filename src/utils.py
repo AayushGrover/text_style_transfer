@@ -1,3 +1,5 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
 import torch
 from transformers import BertModel, BertTokenizer, GPT2LMHeadModel, GPT2Tokenizer, pipeline
 
@@ -94,6 +96,16 @@ class GPT2Util():
         return batch_seq
 
 
+def generate_train_test_split(path=config.path, train_path=config.train_path, test_path=config.test_path):
+    d = pd.read_csv(path)
+    review = d.review
+    sentiment = d.sentiment
+    review_train, review_test, sentiment_train, sentiment_test = train_test_split(review, sentiment, test_size=0.3, random_state=42)
+    train_d = pd.DataFrame({'review': review_train, 'sentiment': sentiment_train})
+    test_d = pd.DataFrame({'review': review_test, 'sentiment': sentiment_test})
+    train_d.to_csv(train_path, index=False)
+    test_d.to_csv(test_path, index=False)
+
 if __name__ == '__main__':
     # sentence = 'Jim Henson was a puppeteer'
     # bert_util = BertUtil()
@@ -107,5 +119,6 @@ if __name__ == '__main__':
 
     # inputs_embeds = torch.rand((config.batch_size, config.max_length, config.gpt2_dim)).to(config.device)
     # gpt2_util = GPT2Util()
-    # for sentence in gpt2_util.batch_generate_sentence(inputs_embeds):
-    #     print(sentence)
+    # print(gpt2_util.batch_generate_sentence(inputs_embeds))
+
+    generate_train_test_split()
