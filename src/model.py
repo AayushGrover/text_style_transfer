@@ -32,7 +32,7 @@ if __name__ == "__main__":
     dataset = IMDBDataset(bert_util=bert_util, sentiment_analysis_util=sentiment_analysis_util)
     dataloader = DataLoader(dataset, batch_size=config.batch_size, shuffle=True)
     cls_embedding, word_embeddings, sentiment_embedding = next(iter(dataloader))
-    
+
     input_embeds = model(cls_embedding, word_embeddings, sentiment_embedding)
 
     gpt2_util = GPT2Util()
