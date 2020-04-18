@@ -11,6 +11,7 @@ from data_loader import IMDBDataset
 from model import Net
 from losses import loss_semantic_meaning, loss_sentiment
 import config
+import torch
 
 def train(model, 
         train_dl, 
@@ -24,25 +25,44 @@ def train(model,
 
     writer = SummaryWriter()
 
+    alpha = config.loss_interpolation_factor_initial
+    alpha_step = config.loss_interpolation_step
+    alpha_min = config.loss_interpolation_limit
+
     for epoch in range(1, epochs + 1):
         print(f"Epoch: {epoch}")
+        if epoch != 1 and ((alpha - alpha_step) >= alpha_min):
+            alpha = alpha - alpha_step
+        
         epoch_train_loss = 0
-        for batch in tqdm(train_dl):
-            input_cls_embedding = batch.cls_embedding
-            input_word_embeddings = batch.word_embeddings
-            input_sentiment_embeddings = batch.sentiment_embedding
-
+        for input_cls_embedding,input_word_embeddings,input_sentiment_embeddings in tqdm(train_dl):
             gpt2_input_embeds = model(input_cls_embedding, input_word_embeddings, input_sentiment_embeddings)
 
+            output_cls_batch = []
+            output_sentiment_embedding_batch = []
             for sentence in gpt2_util.batch_generate_sentence(gpt2_input_embeds):
                 output_cls_embeddings = bert_util.generate_cls_embedding(sentence)
-                output_word_embeddings = bert_util.generate_word_embeddings(sentence)
                 output_sentiment_embedding = sentiment_analysis_util.get_sentiment_vector(sentence)
+                
+                output_cls_batch.append(output_cls_embeddings)
+                output_sentiment_embedding_batch.append(output_sentiment_embedding)
+            
+            output_cls_batch = torch.stack(output_cls_batch)
+            output_sentiment_embedding_batch = torch.stack(output_sentiment_embedding_batch)
+
+            #input sentiment embeddings are going to be used as the targets for the loss
+            loss = (alpha) * loss_semantic_meaning(input_cls_embedding,output_cls_batch) + (1 - alpha) * loss_sentiment(input_sentiment_embeddings,output_sentiment_embedding_batch)
+            print(loss)
+
+            # optimizer.zero_grad()
+            # loss.backward()
+            # optimizer.step()
 
     writer.close()
 
 if __name__ == '__main__':
     bert_util = BertUtil()
+    gpt2_util = GPT2Util()
     sentiment_analysis_util = SentimentAnalysisUtil()
     
     train_dataset = IMDBDataset(bert_util=bert_util, 

@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from sklearn.model_selection import train_test_split
 import torch
 from transformers import BertModel, BertTokenizer, GPT2LMHeadModel, GPT2Tokenizer, pipeline
@@ -68,6 +69,9 @@ class SentimentAnalysisUtil():
     def get_sentiment_vector_from_label(self, sentiment_label):
         return self._get_sentiment_vector(sentiment_label)
 
+    def get_rand_target_sentiment(self):
+        target_sentiment =np.random.choice(list(self.SENTIMENTS)) 
+        return self._get_sentiment_vector(target_sentiment)
 
 class GPT2Util():
     def __init__(self, pretrained_weights=config.gpt2_pretrained_weights, max_length=config.max_length):

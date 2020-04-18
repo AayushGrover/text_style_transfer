@@ -24,7 +24,8 @@ class IMDBDataset(Dataset):
         sentence = self.data_frame.review.iloc[idx]
         cls_embedding = self.bert_util.generate_cls_embedding(sentence)
         word_embeddings = self.bert_util.generate_word_embeddings(sentence)
-        sentiment_embedding = self.sentiment_analysis_util.get_sentiment_vector(sentence)
+        # sentiment_embedding = self.sentiment_analysis_util.get_sentiment_vector(sentence)
+        sentiment_embedding = self.sentiment_analysis_util.get_rand_target_sentiment()
         return cls_embedding, word_embeddings, sentiment_embedding
 
 if __name__ == "__main__":

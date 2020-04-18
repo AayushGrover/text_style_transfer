@@ -15,3 +15,8 @@ batch_size = 4
 max_length = 512
 bert_dim = 768
 gpt2_dim = 768
+
+# for interpolating the two losses
+loss_interpolation_factor_initial = 0.9
+loss_interpolation_step = 0.1
+loss_interpolation_limit = 0.5
