@@ -23,15 +23,30 @@ class BertUtil():
     
     def _generate_cls_embedding(self, input_ids):
         with torch.no_grad():
-            out = self.model(input_ids)[0]
-            cls_embedding = out[:, 0, :].squeeze(0).to(config.device)
-            # shape(cls_embedding) = [1, hidden_dim]
-            return cls_embedding
+            out = self.model(input_ids)[0]  # disable grad for BERT model
+        cls_embedding = out[:, 0, :].squeeze(0).to(config.device)
+        # shape(cls_embedding) = [1, hidden_dim]
+        cls_embedding.requires_grad = True  # enable grad (finetuning) for the vector obtained from the BERT model
+        return cls_embedding
+    
+    def _generate_batch_cls_embeddings(self, batch_input_ids):
+        with torch.no_grad():
+            out = self.model(batch_input_ids)[0] # disable grad for BERT model
+        batch_cls_embeddings = out[:, 0, :].to(config.device)
+        batch_cls_embeddings.requires_grad = True # enable grad (finetuning) for the vector obtained from the BERT model
+        return batch_cls_embeddings
     
     def _generate_word_embeddings(self, input_ids):
         with torch.no_grad():
-            out = self.model(input_ids)[0].squeeze(0).to(config.device)
-            return out
+            out = self.model(input_ids)[0].squeeze(0).to(config.device) # disable grad for BERT model 
+        out.requires_grad = True    # enable grad (finetuning) for the vector obtained from the BERT model
+        return out
+    
+    def _generate_batch_word_embeddings(self, batch_input_ids):
+        with torch.no_grad():
+            out = self.model(batch_input_ids)[0].to(config.device)
+        out.requires_grad = True    # enable grad (finetuning) for the vector obtained from the BERT model
+        return out
     
     def generate_cls_embedding(self, sentence):
         input_ids = self._generate_input_ids(sentence)
@@ -42,6 +57,20 @@ class BertUtil():
         input_ids = self._generate_input_ids(sentence)
         word_embeddings = self._generate_word_embeddings(input_ids)
         return word_embeddings
+    
+    def generate_batch_cls_embeddings(self, batch_sentences):
+        l = list()
+        for sentence in batch_sentences:
+            l.append(self._generate_input_ids(sentence).squeeze(0))
+        batch_input_ids = torch.stack(l)
+        return self._generate_batch_cls_embeddings(batch_input_ids)
+    
+    def generate_batch_word_embeddings(self, batch_sentences):
+        l = list()
+        for sentence in batch_sentences:
+            l.append(self._generate_input_ids(sentence).squeeze(0))
+        batch_input_ids = torch.stack(l)
+        return self._generate_batch_word_embeddings(batch_input_ids)
 
 
 class SentimentAnalysisUtil():
@@ -66,12 +95,20 @@ class SentimentAnalysisUtil():
         vec = self._get_sentiment_vector(sentiment_label)
         return vec
     
+    def get_batch_sentiment_vectors(self, sentences):
+        l = list()
+        for sentence in sentences:
+            l.append(self.get_sentiment_vector(sentence))
+        vectors = torch.stack(l)
+        return vectors
+
     def get_sentiment_vector_from_label(self, sentiment_label):
         return self._get_sentiment_vector(sentiment_label)
 
     def get_rand_target_sentiment(self):
         target_sentiment = np.random.choice(list(self.SENTIMENTS)) 
         return self._get_sentiment_vector(target_sentiment)
+
 
 class GPT2Util():
     def __init__(self, pretrained_weights=config.gpt2_pretrained_weights, max_length=config.max_length):
@@ -109,6 +146,7 @@ def generate_train_test_split(path=config.path, train_path=config.train_path, te
     test_d = pd.DataFrame({'review': review_test, 'sentiment': sentiment_test})
     train_d.to_csv(train_path, index=False)
     test_d.to_csv(test_path, index=False)
+
 
 if __name__ == '__main__':
     # sentence = 'Jim Henson was a puppeteer'
