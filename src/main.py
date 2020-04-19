@@ -30,7 +30,7 @@ def train(model,
     alpha_min = config.loss_interpolation_limit
 
     for epoch in range(1, epochs + 1):
-        print(f"Epoch: {epoch}")
+        print(f'Epoch: {epoch}')
         if epoch != 1 and ((alpha - alpha_step) >= alpha_min):
             alpha = alpha - alpha_step
         
@@ -50,13 +50,19 @@ def train(model,
             output_cls_batch = torch.stack(output_cls_batch)
             output_sentiment_embedding_batch = torch.stack(output_sentiment_embedding_batch)
 
-            #input sentiment embeddings are going to be used as the targets for the loss
-            loss = (alpha) * loss_semantic_meaning(input_cls_embedding,output_cls_batch) + (1 - alpha) * loss_sentiment(input_sentiment_embeddings,output_sentiment_embedding_batch)
-            print(loss)
+            # input sentiment embeddings are going to be used as the targets for the loss
+            # print('input_cls_embedding.requires_grad', input_cls_embedding.requires_grad)
+            # print('output_cls_batch.requires_grad', output_cls_batch.requires_grad)
+            # print('input_sentiment_embeddings.requires_grad', input_sentiment_embeddings.requires_grad)
+            # print('output_sentiment_embedding_batch.requires_grad', output_sentiment_embedding_batch.requires_grad)
+            l1 = (alpha) * loss_semantic_meaning(input_cls_embedding, output_cls_batch)
+            l2 = (1 - alpha) * loss_sentiment(input_sentiment_embeddings, output_sentiment_embedding_batch)
+            loss = l1 + l2
+            print(f'Loss: {loss}')
 
-            # optimizer.zero_grad()
-            # loss.backward()
-            # optimizer.step()
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
     writer.close()
 
@@ -77,6 +83,7 @@ if __name__ == '__main__':
 
     model = Net()
     model.to(config.device)
+    print('Trainable parameters', sum(p.numel() for p in model.parameters() if p.requires_grad))
 
     optimizer = optim.Adam(model.parameters())
 

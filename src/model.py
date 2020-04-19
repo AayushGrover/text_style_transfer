@@ -20,7 +20,7 @@ class Net(nn.Module):
         return latent
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     model = Net()
     model.to(config.device)
 

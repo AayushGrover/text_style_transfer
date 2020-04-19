@@ -70,7 +70,7 @@ class SentimentAnalysisUtil():
         return self._get_sentiment_vector(sentiment_label)
 
     def get_rand_target_sentiment(self):
-        target_sentiment =np.random.choice(list(self.SENTIMENTS)) 
+        target_sentiment = np.random.choice(list(self.SENTIMENTS)) 
         return self._get_sentiment_vector(target_sentiment)
 
 class GPT2Util():

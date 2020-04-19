@@ -28,7 +28,7 @@ class IMDBDataset(Dataset):
         sentiment_embedding = self.sentiment_analysis_util.get_rand_target_sentiment()
         return cls_embedding, word_embeddings, sentiment_embedding
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     bert_util = BertUtil()
     sentiment_analysis_util = SentimentAnalysisUtil()
     
