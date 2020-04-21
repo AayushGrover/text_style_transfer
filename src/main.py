@@ -66,6 +66,37 @@ def train(model,
 
     writer.close()
 
+def test(model,
+          train_dl,
+          test_dl,
+          bert_util,
+          sentiment_analysis_util,
+          gpt2_util,
+          optimizer,
+          epochs=config.epochs,
+          device=config.device):
+
+    batch_num = 1
+
+    for input_cls_embedding, input_word_embeddings, input_sentiment_embeddings in tqdm(test_dl):
+        gpt2_input_embeds = model(
+            input_cls_embedding, input_word_embeddings, input_sentiment_embeddings)
+
+        sentences = gpt2_util.batch_generate_sentence(gpt2_input_embeds)
+        print("Batch Number:",batch_num)
+        print("-"*20)
+        print("Input sentiment embeddings:\n")
+        print(input_sentiment_embeddings)
+        print("-"*20)
+        print("Produced sentences:\n")
+        # for s in sentences:
+        #     print(s)
+        #     print("*"*15)
+        print(sentences)
+        print("-"*20)
+        input()
+
+
 if __name__ == '__main__':
     bert_util = BertUtil()
     gpt2_util = GPT2Util()
@@ -100,3 +131,11 @@ if __name__ == '__main__':
             sentiment_analysis_util=sentiment_analysis_util, 
             gpt2_util=gpt2_util, 
             optimizer=optimizer)
+    else:
+        test(model=model,
+              train_dl=train_dl,
+              test_dl=test_dl,
+              bert_util=bert_util,
+              sentiment_analysis_util=sentiment_analysis_util,
+              gpt2_util=gpt2_util,
+              optimizer=optimizer)
