@@ -12,7 +12,7 @@ class Net(nn.Module):
     
     def forward(self, cls_embedding, word_embeddings, sentiment_embedding):
         # introduce a dimension along seq_len axis
-        # repeat the sentiment_embedding across all seq_len dimension (make a copy for each word)
+        # repeat the sentiment_embedding across the seq_len dimension (make a copy for each word)
         sentiment_embedding = sentiment_embedding.unsqueeze(1).repeat(1, config.max_length, 1)
         # concatenate the same shape matrices
         conc = torch.cat((word_embeddings, sentiment_embedding), dim=2)

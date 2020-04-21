@@ -33,18 +33,39 @@ class BertUtil():
         with torch.no_grad():
             out = self.model(batch_input_ids)[0] # disable grad for BERT model
         batch_cls_embeddings = out[:, 0, :].to(config.device)
+        # shape(batch_cls_embeddings) = [batch_size, hidden_dim]
         batch_cls_embeddings.requires_grad = True # enable grad (finetuning) for the vector obtained from the BERT model
         return batch_cls_embeddings
     
     def _generate_word_embeddings(self, input_ids):
         with torch.no_grad():
             out = self.model(input_ids)[0].squeeze(0).to(config.device) # disable grad for BERT model 
+        # shape(out) = [seq_len, hidden_dim]
         out.requires_grad = True    # enable grad (finetuning) for the vector obtained from the BERT model
         return out
     
     def _generate_batch_word_embeddings(self, batch_input_ids):
         with torch.no_grad():
             out = self.model(batch_input_ids)[0].to(config.device)
+        # shape(out) = [batch_size, seq_len, hidden_dim]
+        out.requires_grad = True    # enable grad (finetuning) for the vector obtained from the BERT model
+        return out
+
+    def _generate_sentence_embedding(self, input_ids):
+        with torch.no_grad():
+            out = self.model(input_ids)[0].squeeze(0).to(config.device) # disable grad for BERT model 
+        out = torch.sum(out[1:], dim=0) # sum all the word piece tokens in the seq (apart from the starting [CLS] token)
+        out = out.unsqueeze(0)
+        # shape(out) = [1, hidden_dim]
+        out.requires_grad = True    # enable grad (finetuning) for the vector obtained from the BERT model
+        return out
+    
+    def _generate_batch_sentence_embedding(self, batch_input_ids):
+        with torch.no_grad():
+            out = self.model(batch_input_ids)[0].to(config.device)
+        out = torch.sum(out[:, 1:, :], dim=1)   # sum all the word piece tokens in the seq (apart from the starting [CLS] token)
+        out = out.unsqueeze(1)
+        # shape(out) = [batch_size, 1, hidden_dim]
         out.requires_grad = True    # enable grad (finetuning) for the vector obtained from the BERT model
         return out
     
@@ -57,7 +78,12 @@ class BertUtil():
         input_ids = self._generate_input_ids(sentence)
         word_embeddings = self._generate_word_embeddings(input_ids)
         return word_embeddings
-    
+
+    def generate_sentence_embedding(self, sentence):
+        input_ids = self._generate_input_ids(sentence)
+        sentence_embedding = self._generate_sentence_embedding(input_ids)
+        return sentence_embedding
+
     def generate_batch_cls_embeddings(self, batch_sentences):
         l = list()
         for sentence in batch_sentences:
@@ -71,6 +97,13 @@ class BertUtil():
             l.append(self._generate_input_ids(sentence).squeeze(0))
         batch_input_ids = torch.stack(l)
         return self._generate_batch_word_embeddings(batch_input_ids)
+    
+    def generate_batch_sentence_embedding(self, batch_sentences):
+        l = list()
+        for sentence in batch_sentences:
+            l.append(self._generate_input_ids(sentence).squeeze(0))
+        batch_input_ids = torch.stack(l)
+        return self._generate_batch_sentence_embedding(batch_input_ids)
 
 
 class SentimentAnalysisUtil():
@@ -149,10 +182,10 @@ def generate_train_test_split(path=config.path, train_path=config.train_path, te
 
 
 if __name__ == '__main__':
-    # sentence = 'Jim Henson was a puppeteer'
-    # bert_util = BertUtil()
-    # word_embeddings = bert_util.generate_word_embeddings(sentence)
-    # print('word_embeddings.shape', word_embeddings.shape)
+    sentences = ['Jim Henson was a puppeteer', 'Transformers: State-of-the-art Natural Language Processing for TensorFlow 2.0 and PyTorch.']
+    bert_util = BertUtil()
+    batch_sentence_embedding = bert_util.generate_batch_sentence_embedding(sentences)
+    print('batch_sentence_embedding.shape', batch_sentence_embedding.shape)
 
     # sentiment_analysis_util = SentimentAnalysisUtil()
     # sentence = 'Sad'
@@ -163,4 +196,4 @@ if __name__ == '__main__':
     # gpt2_util = GPT2Util()
     # print(gpt2_util.batch_generate_sentence(inputs_embeds))
 
-    generate_train_test_split()
+    # generate_train_test_split()

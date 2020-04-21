@@ -32,7 +32,9 @@ if __name__ == '__main__':
     bert_util = BertUtil()
     sentiment_analysis_util = SentimentAnalysisUtil()
     
-    dataset = IMDBDataset(bert_util=bert_util, sentiment_analysis_util=sentiment_analysis_util)
+    dataset = IMDBDataset(bert_util=bert_util, 
+                            sentiment_analysis_util=sentiment_analysis_util, 
+                            path=config.train_path)
     dataloader = DataLoader(dataset, batch_size=config.batch_size)
     
     cls_embedding, word_embeddings, sentiment_embedding = next(iter(dataloader))
