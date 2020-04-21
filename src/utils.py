@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 import torch
 from transformers import BertModel, BertTokenizer, GPT2LMHeadModel, GPT2Tokenizer, pipeline
+from sentence_transformers import SentenceTransformer
 
 import config
 
@@ -64,8 +65,7 @@ class BertUtil():
         with torch.no_grad():
             out = self.model(batch_input_ids)[0].to(config.device)
         out = torch.sum(out[:, 1:, :], dim=1)   # sum all the word piece tokens in the seq (apart from the starting [CLS] token)
-        out = out.unsqueeze(1)
-        # shape(out) = [batch_size, 1, hidden_dim]
+        # shape(out) = [batch_size, hidden_dim]
         out.requires_grad = True    # enable grad (finetuning) for the vector obtained from the BERT model
         return out
     
@@ -105,6 +105,24 @@ class BertUtil():
         batch_input_ids = torch.stack(l)
         return self._generate_batch_sentence_embedding(batch_input_ids)
 
+
+class SentenceBERTUtil():
+    def __init__(self, pretrained_weights=config.sentence_bert_pretrained):
+        self.pretrained_weights = pretrained_weights
+        self.model = SentenceTransformer(self.pretrained_weights, device=config.device)
+    
+    def get_sentence_embedding(self, sentence):
+        assert(type(sentence) == str)
+        sentence_embedding = np.array(self.model.encode([sentence], show_progress_bar=False))
+        sentence_embedding = torch.from_numpy(sentence_embedding).to(config.device)
+        # shape(sentence_embedding) = [1, hidden_dim]
+        return sentence_embedding
+
+    def get_batch_sentence_embedding(self, batch_sentences):
+        batch_sentence_embeddings = np.array(self.model.encode(batch_sentences, show_progress_bar=False))
+        batch_sentence_embeddings = torch.from_numpy(batch_sentence_embeddings).to(config.device)
+        # shape(batch_sentence_embeddings) = [batch_size, hidden_dim]
+        return batch_sentence_embeddings
 
 class SentimentAnalysisUtil():
     def __init__(self, SENTIMENTS=config.SENTIMENTS):
@@ -182,10 +200,13 @@ def generate_train_test_split(path=config.path, train_path=config.train_path, te
 
 
 if __name__ == '__main__':
-    sentences = ['Jim Henson was a puppeteer', 'Transformers: State-of-the-art Natural Language Processing for TensorFlow 2.0 and PyTorch.']
-    bert_util = BertUtil()
-    batch_sentence_embedding = bert_util.generate_batch_sentence_embedding(sentences)
-    print('batch_sentence_embedding.shape', batch_sentence_embedding.shape)
+    sentence = 'Jim Henson was a puppeteer'
+    # bert_util = BertUtil()
+    # sentence_embedding = bert_util.generate_sentence_embedding(sentence)
+    # print('sentence_embedding.shape', sentence_embedding.shape)
+
+    sentence_bert_util = SentenceBERTUtil()
+    sentence_embedding = sentence_bert_util.get_sentence_embedding(sentence)
 
     # sentiment_analysis_util = SentimentAnalysisUtil()
     # sentence = 'Sad'

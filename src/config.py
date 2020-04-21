@@ -5,6 +5,7 @@ path = '../data/IMDB Dataset.csv'
 train_path = '../data/train_IMDB Dataset.csv'
 test_path = '../data/test_IMDB Dataset.csv'
 bert_pretrained_weights = 'bert-base-uncased'
+sentence_bert_pretrained = 'bert-base-nli-stsb-mean-tokens' # suited for semantic textual similarity
 gpt2_pretrained_weights = 'gpt2'
 SENTIMENTS = {'POSITIVE': 0, 'NEGATIVE': 1} # setup enumeration for both the sentiments
 train = True
