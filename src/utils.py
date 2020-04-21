@@ -56,8 +56,7 @@ class BertUtil():
         with torch.no_grad():
             out = self.model(input_ids)[0].squeeze(0).to(config.device) # disable grad for BERT model 
         out = torch.sum(out[1:], dim=0) # sum all the word piece tokens in the seq (apart from the starting [CLS] token)
-        out = out.unsqueeze(0)
-        # shape(out) = [1, hidden_dim]
+        # shape(out) = [hidden_dim]
         out.requires_grad = True    # enable grad (finetuning) for the vector obtained from the BERT model
         return out
     
@@ -110,18 +109,23 @@ class SentenceBERTUtil():
     def __init__(self, pretrained_weights=config.sentence_bert_pretrained):
         self.pretrained_weights = pretrained_weights
         self.model = SentenceTransformer(self.pretrained_weights, device=config.device)
+        self.model.eval()
     
-    def get_sentence_embedding(self, sentence):
+    def generate_sentence_embedding(self, sentence):
         assert(type(sentence) == str)
-        sentence_embedding = np.array(self.model.encode([sentence], show_progress_bar=False))
-        sentence_embedding = torch.from_numpy(sentence_embedding).to(config.device)
-        # shape(sentence_embedding) = [1, hidden_dim]
+        with torch.no_grad():
+            sentence_embedding = np.array(self.model.encode([sentence], show_progress_bar=False))
+        sentence_embedding = torch.from_numpy(sentence_embedding).squeeze(0).to(config.device)
+        # shape(sentence_embedding) = [hidden_dim]
+        sentence_embedding.requires_grad = True    # enable grad (finetuning) for the vector obtained from the Sentence-BERT model
         return sentence_embedding
 
-    def get_batch_sentence_embedding(self, batch_sentences):
-        batch_sentence_embeddings = np.array(self.model.encode(batch_sentences, show_progress_bar=False))
+    def generate_batch_sentence_embedding(self, batch_sentences):
+        with torch.no_grad():
+            batch_sentence_embeddings = np.array(self.model.encode(batch_sentences, show_progress_bar=False))
         batch_sentence_embeddings = torch.from_numpy(batch_sentence_embeddings).to(config.device)
         # shape(batch_sentence_embeddings) = [batch_size, hidden_dim]
+        batch_sentence_embeddings.requires_grad = True    # enable grad (finetuning) for the vector obtained from the Sentence-BERT model
         return batch_sentence_embeddings
 
 class SentimentAnalysisUtil():
@@ -200,13 +204,18 @@ def generate_train_test_split(path=config.path, train_path=config.train_path, te
 
 
 if __name__ == '__main__':
-    sentence = 'Jim Henson was a puppeteer'
-    # bert_util = BertUtil()
-    # sentence_embedding = bert_util.generate_sentence_embedding(sentence)
-    # print('sentence_embedding.shape', sentence_embedding.shape)
-
+    bert_util = BertUtil()
     sentence_bert_util = SentenceBERTUtil()
-    sentence_embedding = sentence_bert_util.get_sentence_embedding(sentence)
+
+    sentence = 'Jim Henson was a puppeteer'
+
+    sentence_embedding = bert_util.generate_cls_embedding(sentence)
+    print('bert_cls_embedding.shape', sentence_embedding.shape)
+    sentence_embedding = bert_util.generate_sentence_embedding(sentence)
+    print('bert_sentence_embedding.shape', sentence_embedding.shape)
+
+    sentence_embedding = sentence_bert_util.generate_sentence_embedding(sentence)
+    print('sentence_bert_embedding.shape', sentence_embedding.shape)
 
     # sentiment_analysis_util = SentimentAnalysisUtil()
     # sentence = 'Sad'

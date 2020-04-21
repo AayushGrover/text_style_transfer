@@ -6,7 +6,7 @@ from torch.utils.data import Dataset, DataLoader
 import torch.optim as optim
 from tensorboardX import SummaryWriter
 
-from utils import BertUtil, GPT2Util, SentimentAnalysisUtil
+from utils import BertUtil, SentenceBERTUtil, GPT2Util, SentimentAnalysisUtil
 from data_loader import IMDBDataset
 from model import Net
 from losses import loss_semantic_meaning, loss_sentiment
@@ -31,19 +31,24 @@ def train(model,
 
     for epoch in range(1, epochs + 1):
         print(f'Epoch: {epoch}')
+        epoch_train_loss = 0
         if(epoch != 1 and ((alpha - alpha_step) >= alpha_min)):
             alpha = alpha - alpha_step
         
-        epoch_train_loss = 0
-        for input_cls_embedding,input_word_embeddings,input_sentiment_embeddings in tqdm(train_dl):
-            gpt2_input_embeds = model(input_cls_embedding, input_word_embeddings, input_sentiment_embeddings)
+        for input_sentence_embedding, input_word_embeddings, input_sentiment_embeddings in tqdm(train_dl):
+            gpt2_input_embeds = model(input_sentence_embedding, input_word_embeddings, input_sentiment_embeddings)
             
             sentences = gpt2_util.batch_generate_sentence(gpt2_input_embeds)
-            output_cls_batch = bert_util.generate_batch_cls_embeddings(sentences)
+            if(config.use_bert_cls_embedding == True):
+                output_batch_sentence_embedding = bert_util.generate_batch_cls_embeddings(sentences)
+            elif(config.use_bert_sentence_embedding == True):
+                output_batch_sentence_embedding = bert_util.generate_batch_sentence_embedding(sentences)
+            elif(config.use_sentence_bert_embedding == True):
+                output_batch_sentence_embedding = sentence_bert_util.generate_batch_sentence_embedding(sentences)
             output_sentiment_embedding_batch = sentiment_analysis_util.get_batch_sentiment_vectors(sentences)
 
             # input sentiment embeddings are going to be used as the targets for the loss
-            semantic_meaning_loss = (alpha) * loss_semantic_meaning(input_cls_embedding, output_cls_batch)
+            semantic_meaning_loss = (alpha) * loss_semantic_meaning(input_sentence_embedding, output_batch_sentence_embedding)
             sentiment_loss = (1 - alpha) * loss_sentiment(input_sentiment_embeddings, output_sentiment_embedding_batch)
             loss = torch.sum(semantic_meaning_loss+sentiment_loss, dim=0)
             print(f'Loss: {loss}')
@@ -52,19 +57,27 @@ def train(model,
             loss.backward()
             optimizer.step()
             epoch_train_loss += loss.item()
+
         writer.add_scalar('Loss/train', epoch_train_loss, epoch)
+
+        if(epoch % config.ckpt_num):
+            model_save_path = config.model_save_path[:-3] + '_epoch_(' + str(epoch) + ').pt'
+            torch.save(model.state_dict(), model_save_path)
 
     writer.close()
 
 if __name__ == '__main__':
     bert_util = BertUtil()
     gpt2_util = GPT2Util()
+    sentence_bert_util = SentenceBERTUtil()
     sentiment_analysis_util = SentimentAnalysisUtil()
     
     train_dataset = IMDBDataset(bert_util=bert_util, 
+                            sentence_bert_util=sentence_bert_util,
                             sentiment_analysis_util=sentiment_analysis_util, 
                             path=config.train_path)
     test_dataset = IMDBDataset(bert_util=bert_util, 
+                            sentence_bert_util=sentiment_analysis_util,
                             sentiment_analysis_util=sentiment_analysis_util, 
                             path=config.test_path)
     
