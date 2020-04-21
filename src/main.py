@@ -14,14 +14,12 @@ import config
 import torch
 
 def train(model, 
-        train_dl, 
-        test_dl, 
+        train_dl,
         bert_util, 
         sentiment_analysis_util, 
         gpt2_util, 
         optimizer, 
-        epochs=config.epochs, 
-        device=config.device):
+        epochs=config.epochs):
 
     writer = SummaryWriter()
 
@@ -51,47 +49,34 @@ def train(model,
             semantic_meaning_loss = (alpha) * loss_semantic_meaning(input_sentence_embedding, output_batch_sentence_embedding)
             sentiment_loss = (1 - alpha) * loss_sentiment(input_sentiment_embeddings, output_sentiment_embedding_batch)
             loss = torch.sum(semantic_meaning_loss+sentiment_loss, dim=0)
-            print(f'Loss: {loss}')
-
+            
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             epoch_train_loss += loss.item()
 
+        print(f'Loss: {epoch_train_loss}')
         writer.add_scalar('Loss/train', epoch_train_loss, epoch)
 
         if(epoch % config.ckpt_num):
-            model_save_path = config.model_save_path[:-3] + '_epoch_(' + str(epoch) + ').pt'
-            torch.save(model.state_dict(), model_save_path)
+            torch.save(model.state_dict(), config.model_save_path)
 
     writer.close()
 
 def test(model,
-          train_dl,
           test_dl,
-          bert_util,
-          sentiment_analysis_util,
-          gpt2_util,
-          optimizer,
-          epochs=config.epochs,
-          device=config.device):
+          gpt2_util):
 
-    batch_num = 1
-
-    for input_cls_embedding, input_word_embeddings, input_sentiment_embeddings in tqdm(test_dl):
-        gpt2_input_embeds = model(
-            input_cls_embedding, input_word_embeddings, input_sentiment_embeddings)
-
+    for i, (input_sentence_embedding, input_word_embeddings, input_sentiment_embeddings) in enumerate(test_dl):
+        gpt2_input_embeds = model(input_sentence_embedding, input_word_embeddings, input_sentiment_embeddings)
         sentences = gpt2_util.batch_generate_sentence(gpt2_input_embeds)
-        print("Batch Number:",batch_num)
+
+        print("Batch Number:", i+1)
         print("-"*20)
-        print("Input sentiment embeddings:\n")
+        print("Input sentiment embeddings:")
         print(input_sentiment_embeddings)
         print("-"*20)
         print("Produced sentences:\n")
-        # for s in sentences:
-        #     print(s)
-        #     print("*"*15)
         print(sentences)
         print("-"*20)
         input()
@@ -116,26 +101,25 @@ if __name__ == '__main__':
     test_dl = DataLoader(test_dataset, batch_size=config.batch_size)
 
     model = Net()
-    model.to(config.device)
-
-    print('Total number of parameters', sum(p.numel() for p in model.parameters()))
-    print('Number of trainable parameters', sum(p.numel() for p in model.parameters() if p.requires_grad))
-
-    optimizer = optim.Adam(model.parameters())
 
     if(config.train == True):
+        model.to(config.device)
+
+        print('Total number of parameters', sum(p.numel() for p in model.parameters()))
+        print('Number of trainable parameters', sum(p.numel() for p in model.parameters() if p.requires_grad))
+
+        optimizer = optim.Adam(model.parameters())
+
         train(model=model, 
             train_dl=train_dl, 
-            test_dl=test_dl, 
             bert_util=bert_util, 
             sentiment_analysis_util=sentiment_analysis_util, 
             gpt2_util=gpt2_util, 
             optimizer=optimizer)
     else:
+        model = torch.load_state_dict(torch.load(config.model_save_path))
+        model.to(config.device)
+
         test(model=model,
-              train_dl=train_dl,
               test_dl=test_dl,
-              bert_util=bert_util,
-              sentiment_analysis_util=sentiment_analysis_util,
-              gpt2_util=gpt2_util,
-              optimizer=optimizer)
+              gpt2_util=gpt2_util)
