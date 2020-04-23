@@ -1,6 +1,6 @@
 import torch
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
 path = '../data/IMDB Dataset.csv'
 train_path = '../data/train_IMDB Dataset.csv'
 test_path = '../data/test_IMDB Dataset.csv'

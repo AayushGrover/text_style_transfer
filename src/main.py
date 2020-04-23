@@ -58,7 +58,7 @@ def train(model,
         print(f'Loss: {epoch_train_loss}')
         writer.add_scalar('Loss/train', epoch_train_loss, epoch)
 
-        if(epoch % config.ckpt_num):
+        if(epoch % config.ckpt_num == 0):
             torch.save(model.state_dict(), config.model_save_path)
 
     writer.close()
