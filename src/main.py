@@ -93,7 +93,7 @@ if __name__ == '__main__':
                             sentiment_analysis_util=sentiment_analysis_util, 
                             path=config.train_path)
     test_dataset = IMDBDataset(bert_util=bert_util, 
-                            sentence_bert_util=sentiment_analysis_util,
+                            sentence_bert_util=sentence_bert_util,
                             sentiment_analysis_util=sentiment_analysis_util, 
                             path=config.test_path)
     
@@ -117,7 +117,7 @@ if __name__ == '__main__':
             gpt2_util=gpt2_util, 
             optimizer=optimizer)
     else:
-        model = torch.load_state_dict(torch.load(config.model_save_path))
+        # model = torch.load_state_dict(torch.load(config.model_save_path))
         model.to(config.device)
 
         test(model=model,
