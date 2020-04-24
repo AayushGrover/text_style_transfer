@@ -46,8 +46,8 @@ def train(model,
             output_sentiment_embedding_batch = sentiment_analysis_util.get_batch_sentiment_vectors(sentences)
 
             # input sentiment embeddings are going to be used as the targets for the loss
-            semantic_meaning_loss = (alpha) * loss_semantic_meaning(input_sentence_embedding, output_batch_sentence_embedding)
-            sentiment_loss = (1 - alpha) * loss_sentiment(input_sentiment_embeddings, output_sentiment_embedding_batch)
+            semantic_meaning_loss = (alpha) * config.semantic_meaning_weight * loss_semantic_meaning(input_sentence_embedding, output_batch_sentence_embedding)
+            sentiment_loss = (1 - alpha) * config.sentiment_weight * loss_sentiment(input_sentiment_embeddings, output_sentiment_embedding_batch)
             loss = torch.sum(semantic_meaning_loss+sentiment_loss, dim=0)
             
             optimizer.zero_grad()
