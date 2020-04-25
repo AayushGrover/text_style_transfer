@@ -30,3 +30,6 @@ gpt2_dim = 768
 loss_interpolation_factor_initial = 0.9
 loss_interpolation_step = 0.1
 loss_interpolation_limit = 0.5
+
+semantic_meaning_weight = 1
+sentiment_weight = 0

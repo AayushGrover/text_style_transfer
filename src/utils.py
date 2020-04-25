@@ -163,6 +163,11 @@ class SentimentAnalysisUtil():
     def get_rand_target_sentiment(self):
         target_sentiment = np.random.choice(list(self.SENTIMENTS)) 
         return self._get_sentiment_vector(target_sentiment)
+    
+    def get_const_positive_sentiment(self):
+        positive_str = 'POSITIVE'
+        assert(positive_str in self.SENTIMENTS)
+        return self._get_sentiment_vector(positive_str)
 
 
 class GPT2Util():

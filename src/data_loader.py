@@ -30,7 +30,8 @@ class IMDBDataset(Dataset):
         elif(config.use_sentence_bert_embedding == True):
             sentence_embedding = self.sentence_bert_util.generate_sentence_embedding(sentence)
         word_embeddings = self.bert_util.generate_word_embeddings(sentence)
-        sentiment_embedding = self.sentiment_analysis_util.get_rand_target_sentiment()
+        # sentiment_embedding = self.sentiment_analysis_util.get_rand_target_sentiment()
+        sentiment_embedding = self.sentiment_analysis_util.get_const_positive_sentiment()
         return sentence_embedding, word_embeddings, sentiment_embedding
 
 if __name__ == '__main__':

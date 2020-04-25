@@ -9,7 +9,7 @@ from tensorboardX import SummaryWriter
 from utils import BertUtil, SentenceBERTUtil, GPT2Util, SentimentAnalysisUtil
 from data_loader import IMDBDataset
 from model import Net
-from losses import loss_semantic_meaning, loss_sentiment
+from losses import loss_semantic_meaning, loss_sentiment, loss_mse_word_embeddings
 import config
 import torch
 
@@ -37,16 +37,19 @@ def train(model,
             gpt2_input_embeds = model(input_sentence_embedding, input_word_embeddings, input_sentiment_embeddings)
             
             sentences = gpt2_util.batch_generate_sentence(gpt2_input_embeds)
-            if(config.use_bert_cls_embedding == True):
-                output_batch_sentence_embedding = bert_util.generate_batch_cls_embeddings(sentences)
-            elif(config.use_bert_sentence_embedding == True):
-                output_batch_sentence_embedding = bert_util.generate_batch_sentence_embedding(sentences)
-            elif(config.use_sentence_bert_embedding == True):
-                output_batch_sentence_embedding = sentence_bert_util.generate_batch_sentence_embedding(sentences)
+            # if(config.use_bert_cls_embedding == True):
+            #     output_batch_sentence_embedding = bert_util.generate_batch_cls_embeddings(sentences)
+            # elif(config.use_bert_sentence_embedding == True):
+            #     output_batch_sentence_embedding = bert_util.generate_batch_sentence_embedding(sentences)
+            # elif(config.use_sentence_bert_embedding == True):
+            #     output_batch_sentence_embedding = sentence_bert_util.generate_batch_sentence_embedding(sentences)
             output_sentiment_embedding_batch = sentiment_analysis_util.get_batch_sentiment_vectors(sentences)
-
+            
+            output_word_embeddings = bert_util.generate_batch_word_embeddings(sentences)
+            
             # input sentiment embeddings are going to be used as the targets for the loss
-            semantic_meaning_loss = (alpha) * config.semantic_meaning_weight * loss_semantic_meaning(input_sentence_embedding, output_batch_sentence_embedding)
+            # semantic_meaning_loss = (alpha) * config.semantic_meaning_weight * loss_semantic_meaning(input_sentence_embedding, output_batch_sentence_embedding)
+            semantic_meaning_loss = (alpha) * config.semantic_meaning_weight * loss_mse_word_embeddings(input_word_embeddings, output_word_embeddings)
             sentiment_loss = (1 - alpha) * config.sentiment_weight * loss_sentiment(input_sentiment_embeddings, output_sentiment_embedding_batch)
             loss = torch.sum(semantic_meaning_loss+sentiment_loss, dim=0)
             
