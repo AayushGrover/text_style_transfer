@@ -5,6 +5,8 @@ import torch
 from transformers import BertModel, BertTokenizer, GPT2LMHeadModel, GPT2Tokenizer, pipeline
 from sentence_transformers import SentenceTransformer
 
+import pickle
+
 import config
 
 class BertUtil():
@@ -110,8 +112,20 @@ class SentenceBERTUtil():
         self.pretrained_weights = pretrained_weights
         self.model = SentenceTransformer(self.pretrained_weights, device=config.device)
         self.model.eval()
+        self.idx2word = pickle.load(open(f'{config.glove_path}/6B.{config.glove_embed_dim}_idx2word.pkl', 'rb'))
     
+    def _get_sentence(self, tokens):
+        sentences = list()
+        for batch in tokens:        
+            s = ""
+            for token in batch:
+                s += self.idx2word[token]+" "
+            
+            sentences.append(s.strip())
+        return sentences
+
     def generate_sentence_embedding(self, sentence):
+        # sentence = self._get_sentence(tokens)
         assert(type(sentence) == str)
         with torch.no_grad():
             sentence_embedding = np.array(self.model.encode([sentence], show_progress_bar=False))
@@ -120,7 +134,8 @@ class SentenceBERTUtil():
         sentence_embedding.requires_grad = True    # enable grad (finetuning) for the vector obtained from the Sentence-BERT model
         return sentence_embedding
 
-    def generate_batch_sentence_embedding(self, batch_sentences):
+    def generate_batch_sentence_embedding(self, tokens):
+        batch_sentences = self._get_sentence(tokens)
         with torch.no_grad():
             batch_sentence_embeddings = np.array(self.model.encode(batch_sentences, show_progress_bar=False))
         batch_sentence_embeddings = torch.from_numpy(batch_sentence_embeddings).to(config.device)
@@ -131,10 +146,12 @@ class SentenceBERTUtil():
 class SentimentAnalysisUtil():
     def __init__(self, SENTIMENTS=config.SENTIMENTS):
         # leverages a fine-tuned model on sst2, which is a GLUE task.
+        self.idx2word = pickle.load(open(f'{config.glove_path}/6B.{config.glove_embed_dim}_idx2word.pkl', 'rb'))
         self.nlp = pipeline('sentiment-analysis')
         self.SENTIMENTS = SENTIMENTS
     
     def _get_sentiment_label(self, sentence):
+        sentence = sentence[:512]
         result = self.nlp(sentence)
         sentiment_label = result[0]['label']
         return sentiment_label
@@ -145,56 +162,68 @@ class SentimentAnalysisUtil():
         # shape(vec) = [len(self.SENTIMENTS)] = [2]
         return vec
     
+    def _get_sentence(self, tokens):
+        sentences = list()
+        for batch in tokens:        
+            s = ""
+            for token in batch:
+                s += self.idx2word[token]+" "
+            
+            sentences.append(s.strip())
+        return sentences
+
     def get_sentiment_vector(self, sentence):
+        # sentence = self._get_sentence(tokens)
         sentiment_label = self._get_sentiment_label(sentence)
         vec = self._get_sentiment_vector(sentiment_label)
         return vec
     
-    def get_batch_sentiment_vectors(self, sentences):
+    def get_batch_sentiment_vectors(self, tokens):
+        sentences = self._get_sentence(tokens)
         l = list()
         for sentence in sentences:
             l.append(self.get_sentiment_vector(sentence))
         vectors = torch.stack(l)
         return vectors
 
-    def get_sentiment_vector_from_label(self, sentiment_label):
-        return self._get_sentiment_vector(sentiment_label)
+#     def get_sentiment_vector_from_label(self, sentiment_label):
+#         return self._get_sentiment_vector(sentiment_label)
 
-    def get_rand_target_sentiment(self):
-        target_sentiment = np.random.choice(list(self.SENTIMENTS)) 
-        return self._get_sentiment_vector(target_sentiment)
+#     def get_rand_target_sentiment(self):
+#         target_sentiment = np.random.choice(list(self.SENTIMENTS)) 
+#         return self._get_sentiment_vector(target_sentiment)
     
-    def get_const_positive_sentiment(self):
-        positive_str = 'POSITIVE'
-        assert(positive_str in self.SENTIMENTS)
-        return self._get_sentiment_vector(positive_str)
+#     def get_const_positive_sentiment(self):
+#         positive_str = 'POSITIVE'
+#         assert(positive_str in self.SENTIMENTS)
+#         return self._get_sentiment_vector(positive_str)
 
 
-class GPT2Util():
-    def __init__(self, pretrained_weights=config.gpt2_pretrained_weights, max_length=config.max_length):
-        self.pretrained_weights = pretrained_weights
-        self.max_length = max_length
-        self.model = GPT2LMHeadModel.from_pretrained(self.pretrained_weights)
-        self.model.to(config.device)
-        self.model.eval()
-        self.tokenizer = GPT2Tokenizer.from_pretrained(self.pretrained_weights)
+# class GPT2Util():
+#     def __init__(self, pretrained_weights=config.gpt2_pretrained_weights, max_length=config.max_length):
+#         self.pretrained_weights = pretrained_weights
+#         self.max_length = max_length
+#         self.model = GPT2LMHeadModel.from_pretrained(self.pretrained_weights)
+#         self.model.to(config.device)
+#         self.model.eval()
+#         self.tokenizer = GPT2Tokenizer.from_pretrained(self.pretrained_weights)
     
-    def batch_generate_sentence(self, inputs_embeds):
-        with torch.no_grad():
-            predictions = self.model(inputs_embeds=inputs_embeds)[0]
-            # shape(predictions) = [batch_size, max_length, gpt2_vocab_size]
+#     def batch_generate_sentence(self, inputs_embeds):
+#         with torch.no_grad():
+#             predictions = self.model(inputs_embeds=inputs_embeds)[0]
+#             # shape(predictions) = [batch_size, max_length, gpt2_vocab_size]
 
-        batch_predicted_indices = torch.argmax(predictions, dim=2)
-        # argmax decoding introduces a lot of repetition
+#         batch_predicted_indices = torch.argmax(predictions, dim=2)
+#         # argmax decoding introduces a lot of repetition
 
-        batch_seq = list()
-        for predicted_indices in batch_predicted_indices:
-            s = ''
-            for predicted_index in predicted_indices:
-                predicted_text = self.tokenizer.decode([predicted_index])
-                s += predicted_text
-            batch_seq.append(s)
-        return batch_seq
+#         batch_seq = list()
+#         for predicted_indices in batch_predicted_indices:
+#             s = ''
+#             for predicted_index in predicted_indices:
+#                 predicted_text = self.tokenizer.decode([predicted_index])
+#                 s += predicted_text
+#             batch_seq.append(s)
+#         return batch_seq
 
 
 def generate_train_test_split(path=config.path, train_path=config.train_path, test_path=config.test_path):
