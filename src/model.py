@@ -11,12 +11,13 @@ import pickle
 import config
 
 class Encoder(nn.Module):
-    def __init__(self, input_size, hidden_size):
+    def __init__(self, input_size, hidden_size, num_layers=config.num_layers):
         super(Encoder, self).__init__()
         self.hidden_size = hidden_size
+        self.num_layers = num_layers
 
         self.embedding = torch.load(f'{config.glove_path}/glove_embeddings_{config.glove_embed_dim}.pt').to(config.device)
-        self.gru = nn.GRU(hidden_size, hidden_size)
+        self.gru = nn.GRU(hidden_size, hidden_size, num_layers=num_layers, bidirectional=True)
 
     def forward(self, input, hidden, batch_size=config.batch_size):
         '''
@@ -31,18 +32,19 @@ class Encoder(nn.Module):
         return output, hidden
 
     def initHidden(self, batch_size=config.batch_size):
-        return torch.zeros(1, batch_size, self.hidden_size, device=config.device)
+        return torch.zeros(2*self.num_layers, batch_size, self.hidden_size, device=config.device)
 
 
 
 class Decoder(nn.Module):
-    def __init__(self, hidden_size, output_size):
+    def __init__(self, hidden_size, output_size, num_layers=config.num_layers):
         super(Decoder, self).__init__()
         self.hidden_size = hidden_size
+        self.num_layers = num_layers
 
         self.embedding = torch.load(f'{config.glove_path}/glove_embeddings_{config.glove_embed_dim}.pt').to(config.device)
-        self.gru = nn.GRU(hidden_size, hidden_size)
-        self.out = nn.Linear(hidden_size, output_size)
+        self.gru = nn.GRU(hidden_size, hidden_size, num_layers=num_layers, bidirectional=True)
+        self.out = nn.Linear(2*hidden_size, output_size)
         self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, input, hidden, batch_size=config.batch_size):
@@ -53,7 +55,7 @@ class Decoder(nn.Module):
         return output, hidden
 
     def initHidden(self, batch_size=config.batch_size):
-        return torch.zeros(1, batch_size, self.hidden_size, device=config.device)
+        return torch.zeros(2*self.num_layers, batch_size, self.hidden_size, device=config.device)
 
 class Seq2Seq(nn.Module):
     def __init__(self, input_size, output_size):
@@ -75,7 +77,7 @@ class Seq2Seq(nn.Module):
         input_length = max_length
         target_length = max_length
 
-        encoder_outputs = torch.zeros(max_length, batch_size, self.encoder.hidden_size, device=self.device)
+        encoder_outputs = torch.zeros(max_length, batch_size, 2*self.encoder.hidden_size, device=self.device)
 
         # print(input_length)
         for ei in range(input_length):
