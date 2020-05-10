@@ -14,8 +14,8 @@ class GloVeEmbed():
         self.glove_path = config.glove_path
         self.words = list()
         self.idx = 0
-        self.word2idx = dict()
-        self.idx2word = dict()
+        self.word2idx = {}
+        self.idx2word = {}
         self.vec_dim = config.glove_embed_dim
         # self.vectors = bcolz.carray(np.zeros(1), rootdir=f'{self.glove_path}/6B.{self.vec_dim}.dat', mode='w')
         self.vectors = list()
@@ -42,12 +42,9 @@ class GloVeEmbed():
 
     def _get_target_vocab(self):
         d = pd.read_csv(config.path)
-        d.review = d.review.apply(lambda x: x.replace('<br />', '')[1:-1])
+        d.review = d.review.apply(lambda x: x.lower().replace('<br />', '')[1:-1])
 
         target_vocab = set()
-        target_vocab.add('<SOS>') 
-        target_vocab.add('<EOS>') 
-        target_vocab.add('<PAD>')
         target_vocab.add('positive') 
         target_vocab.add('negative') 
         
@@ -60,13 +57,17 @@ class GloVeEmbed():
 
     def _get_matrix(self, glove, target_vocab):
         self.idx = 0
-        self.idx2word = dict()
-        self.word2idx = dict()
+        self.word2idx = {}
+        self.idx2word = {}
+        special_tokens = ['<SOS>', '<EOS>', '<PAD>']
+        target_vocab = special_tokens+target_vocab
         matrix_len = len(target_vocab)
         weights_matrix = np.zeros((matrix_len, self.vec_dim))
         words_found = 0
-
+        # for word in self.word2idx:
+        #     weights_matrix[self.word2idx[word]] = np.random.normal(scale=0.6, size=(self.vec_dim, ))
         for i, word in enumerate(target_vocab):
+            
             try: 
                 weights_matrix[i] = glove[word]
                 words_found += 1
@@ -81,7 +82,8 @@ class GloVeEmbed():
         pickle.dump(self.word2idx, open(f'{self.glove_path}/6B.{self.vec_dim}_word2idx.pkl', 'wb'))
         pickle.dump(self.idx2word, open(f'{self.glove_path}/6B.{self.vec_dim}_idx2word.pkl', 'wb'))
 
-        print(matrix_len, words_found, len(self.word2idx))
+        print(matrix_len, words_found)
+        print(self.word2idx['<SOS>'], self.word2idx['<EOS>'], self.word2idx['<PAD>'])
         return emb_layer
 
     def get_embeddings(self):
