@@ -19,7 +19,7 @@ class IMDBDataset(Dataset):
         # self.sentence_bert_util = SentenceBERTUtil()
 
     def clean_dataset(self):
-        self.data_frame.review = self.data_frame.review.apply(lambda x: x.replace('<br />', '')[1:-1])
+        self.data_frame.review = self.data_frame.review.apply(lambda x: x.lower().replace('<br />', '')[1:-1])
 
     def __len__(self):
         return self.data_frame.shape[0]
