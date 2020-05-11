@@ -10,7 +10,7 @@ def loss_semantic(tokens_input, tokens_generated, sentence_bert):
 
 def loss_sentiment(tokens_target, tokens_predicted, sent_analyser):
     # Cross entropy needs the target as the target class
-    sentiment_target = sent_analyser.get_batch_sentiment_vectors(tokens_target)
+    sentiment_target = sent_analyser.get_target_sentiment_vectors(tokens_target)
     sentiment_predicted = sent_analyser.get_batch_sentiment_vectors(tokens_predicted)
     
     cross_entropy = nn.CrossEntropyLoss()
