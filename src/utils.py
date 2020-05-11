@@ -167,8 +167,11 @@ class SentimentAnalysisUtil():
         for batch in tokens:        
             s = ""
             for token in batch:
-                s += self.idx2word[token]+" "
-            
+                try: 
+                    s += self.idx2word[token.item()]+" "
+                except:
+                    s += self.idx2word[token]+" "
+
             sentences.append(s.strip())
         return sentences
 
@@ -178,11 +181,29 @@ class SentimentAnalysisUtil():
         vec = self._get_sentiment_vector(sentiment_label)
         return vec
     
+    def get_flipped_sentiment_vector(self, sentence):
+        # sentence = self._get_sentence(tokens)
+        sentiment_label = self._get_sentiment_label(sentence)
+        if sentiment_label == "NEGATIVE":
+            sentiment_label = "POSITIVE"
+        else:
+            sentiment_label = "NEGATIVE"
+        vec = self._get_sentiment_vector(sentiment_label)
+        return vec
+    
     def get_batch_sentiment_vectors(self, tokens):
         sentences = self._get_sentence(tokens)
         l = list()
         for sentence in sentences:
             l.append(self.get_sentiment_vector(sentence))
+        vectors = torch.stack(l)
+        return vectors
+
+    def get_target_sentiment_vectors(self, tokens):
+        sentences = self._get_sentence(tokens)
+        l = list()
+        for sentence in sentences:
+            l.append(self.get_flipped_sentiment_vector(sentence))
         vectors = torch.stack(l)
         return vectors
 

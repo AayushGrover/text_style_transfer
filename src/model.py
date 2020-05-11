@@ -17,22 +17,22 @@ class Encoder(nn.Module):
         self.num_layers = num_layers
 
         self.embedding = torch.load(f'{config.glove_path}/glove_embeddings_{config.glove_embed_dim}.pt').to(config.device)
-        self.gru = nn.GRU(hidden_size, hidden_size, num_layers=num_layers, bidirectional=True)
+        self.gru = nn.GRU(hidden_size+2, hidden_size+2, num_layers=num_layers, bidirectional=True)
 
-    def forward(self, input, hidden, batch_size=config.batch_size):
+    def forward(self, input, sentiment, hidden, batch_size=config.batch_size):
         '''
         input = [max_len, batch_size]
         '''
         embedded = self.embedding(input).view(1,batch_size,self.hidden_size)
-        output = embedded
-        # print(output.shape)
-        # quit()
-        output, hidden = self.gru(output.float(), hidden)
+        sentiment = sentiment.view(1,batch_size,-1)
+        output = torch.cat((embedded.float(), sentiment), 2)
         
-        return output, hidden
+        output, hidden = self.gru(output, hidden)
+        
+        return output, sentiment, hidden
 
     def initHidden(self, batch_size=config.batch_size):
-        return torch.zeros(2*self.num_layers, batch_size, self.hidden_size, device=config.device)
+        return torch.zeros(2*self.num_layers, batch_size, self.hidden_size+2, device=config.device)
 
 
 
@@ -43,19 +43,20 @@ class Decoder(nn.Module):
         self.num_layers = num_layers
 
         self.embedding = torch.load(f'{config.glove_path}/glove_embeddings_{config.glove_embed_dim}.pt').to(config.device)
-        self.gru = nn.GRU(hidden_size, hidden_size, num_layers=num_layers, bidirectional=True)
-        self.out = nn.Linear(2*hidden_size, output_size)
+        self.gru = nn.GRU(hidden_size+2, hidden_size+2, num_layers=num_layers, bidirectional=True)
+        self.out = nn.Linear(2*(hidden_size+2), output_size)
         self.softmax = nn.LogSoftmax(dim=1)
 
-    def forward(self, input, hidden, batch_size=config.batch_size):
+    def forward(self, input, sentiment, hidden, batch_size=config.batch_size):
         output = self.embedding(input).view(1,batch_size,self.hidden_size)
+        output = torch.cat((output.float(),sentiment), 2)
         output = F.relu(output)
-        output, hidden = self.gru(output.float(), hidden)
+        output, hidden = self.gru(output, hidden)
         output = self.softmax(self.out(output[0]))
         return output, hidden
 
     def initHidden(self, batch_size=config.batch_size):
-        return torch.zeros(2*self.num_layers, batch_size, self.hidden_size, device=config.device)
+        return torch.zeros(2*self.num_layers, batch_size, self.hidden_size+2, device=config.device)
 
 class Seq2Seq(nn.Module):
     def __init__(self, input_size, output_size):
@@ -68,7 +69,7 @@ class Seq2Seq(nn.Module):
         assert self.encoder.hidden_size == self.decoder.hidden_size, \
             "Hidden dimensions of encoder and decoder must be equal!"
 
-    def forward(self, input, batch_size=config.batch_size, max_length=config.max_length):
+    def forward(self, input, sentiment, batch_size=config.batch_size, max_length=config.max_length):
         '''
         input = input tensor
         '''
@@ -77,15 +78,17 @@ class Seq2Seq(nn.Module):
         input_length = max_length
         target_length = max_length
 
-        encoder_outputs = torch.zeros(max_length, batch_size, 2*self.encoder.hidden_size, device=self.device)
+        encoder_outputs = torch.zeros(max_length, batch_size, 2*(self.encoder.hidden_size+2), device=self.device)
 
         # print(input_length)
         for ei in range(input_length):
-            encoder_output, encoder_hidden = self.encoder(
-                input[ei], encoder_hidden)
+            encoder_output, encoder_sentiment, encoder_hidden = self.encoder(
+                input[ei], sentiment, encoder_hidden)
             encoder_outputs[ei] = encoder_output[0]
 
         decoder_input = torch.tensor([[0]*batch_size], device=self.device)
+
+        decoder_sentiment = encoder_sentiment
 
         decoder_hidden = encoder_hidden
 
@@ -94,7 +97,7 @@ class Seq2Seq(nn.Module):
         # Without teacher forcing: use its own predictions as the next input
         for di in range(target_length):
             decoder_output, decoder_hidden= self.decoder(
-                decoder_input, decoder_hidden)
+                decoder_input, decoder_sentiment, decoder_hidden)
             _, topi = decoder_output.topk(1)
             decoder_input = topi.squeeze().detach()  # detach from history as input
             output[di] = decoder_input

@@ -33,8 +33,11 @@ def train(model, train_dl, optimizer, epochs=config.epochs):
             alpha = alpha - alpha_step
         for input_token_seq in tqdm(train_dl):
             
+            input_token_seq = input_token_seq.squeeze() #[batch_size, max_len]
+            input_sentiment_embeddings = sent_analyser.get_target_sentiment_vectors(input_token_seq)
             input_token_seq = input_token_seq.squeeze().t() #[max_len, batch_size]
-            output_seq = model(input_token_seq) #[max_len, batch_size]
+
+            output_seq = model(input_token_seq, input_sentiment_embeddings) #[max_len, batch_size]
 
             input_token_seq = input_token_seq.t() #[batch_size, max_len]
             output_seq = output_seq.t() #[batch_size, max_len]
