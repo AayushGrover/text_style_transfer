@@ -57,7 +57,8 @@ def train(model, train_dl, optimizer, epochs=config.epochs):
 
         if(epoch % config.ckpt_num == 0):
             print('Saving model')
-            torch.save(model.state_dict(), config.model_save_path)
+            checkpoint = {'model': model.state_dict(), 'optimizer': optimizer.state_dict()}
+            torch.save(checkpoint, config.model_save_path)
 
     writer.close()
 
@@ -86,6 +87,12 @@ if __name__ == '__main__':
     model = Seq2Seq(input_size=config.max_length, output_size=config.max_length)
 
     if(config.train == True):
+        try: 
+            checkpoint = torch.load(config.model_save_path)
+            model.load_state_dict(checkpoint['model'])
+        except:
+            pass
+
         model.to(config.device)
         model.train()
 
@@ -93,12 +100,16 @@ if __name__ == '__main__':
         print('Number of trainable parameters', sum(p.numel() for p in model.parameters() if p.requires_grad))
 
         optimizer = optim.Adam(model.parameters())
+        try:
+            optimizer.load_state_dict(checkpoint['optimizer'])
+        except:
+            pass
 
         train(model=model, 
             train_dl=train_dl,
             optimizer=optimizer)
     else:
-        model = torch.load_state_dict(torch.load(config.model_save_path))
+        #model.load_state_dict(torch.load(config.model_save_path))
         model.to(config.device)
         model.eval()
         test(model=model,
