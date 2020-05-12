@@ -17,22 +17,24 @@ class Encoder(nn.Module):
         self.num_layers = num_layers
 
         self.embedding = torch.load(f'{config.glove_path}/glove_embeddings_{config.glove_embed_dim}.pt').to(config.device)
-        self.gru = nn.GRU(hidden_size+2, hidden_size+2, num_layers=num_layers, bidirectional=True)
+        self.gru = nn.GRU(hidden_size, hidden_size, num_layers=num_layers, bidirectional=True)
+        # self.gru = nn.GRU(hidden_size+2, hidden_size+2, num_layers=num_layers, bidirectional=True)
 
     def forward(self, input, sentiment, hidden, batch_size=config.batch_size):
         '''
         input = [max_len, batch_size]
         '''
         embedded = self.embedding(input).view(1,batch_size,self.hidden_size)
-        sentiment = sentiment.view(1,batch_size,-1)
-        output = torch.cat((embedded.float(), sentiment), 2)
-        
+        # sentiment = sentiment.view(1,batch_size,-1)
+        # output = torch.cat((embedded.float(), sentiment), 2)
+        output = embedded.float() # Comment this line when passing sentiment embeddings
         output, hidden = self.gru(output, hidden)
         
         return output, sentiment, hidden
 
     def initHidden(self, batch_size=config.batch_size):
-        return torch.zeros(2*self.num_layers, batch_size, self.hidden_size+2, device=config.device)
+        return torch.zeros(2*self.num_layers, batch_size, self.hidden_size, device=config.device)
+        # return torch.zeros(2*self.num_layers, batch_size, self.hidden_size+2, device=config.device)
 
 
 
@@ -43,20 +45,23 @@ class Decoder(nn.Module):
         self.num_layers = num_layers
 
         self.embedding = torch.load(f'{config.glove_path}/glove_embeddings_{config.glove_embed_dim}.pt').to(config.device)
-        self.gru = nn.GRU(hidden_size+2, hidden_size+2, num_layers=num_layers, bidirectional=True)
-        self.out = nn.Linear(2*(hidden_size+2), output_size)
+        self.gru = nn.GRU(hidden_size, hidden_size, num_layers=num_layers, bidirectional=True)
+        # self.gru = nn.GRU(hidden_size+2, hidden_size+2, num_layers=num_layers, bidirectional=True)
+        self.out = nn.Linear(2*(hidden_size), output_size)
+        # self.out = nn.Linear(2*(hidden_size+2), output_size)
         self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, input, sentiment, hidden, batch_size=config.batch_size):
         output = self.embedding(input).view(1,batch_size,self.hidden_size)
-        output = torch.cat((output.float(),sentiment), 2)
-        output = F.relu(output)
+        # output = torch.cat((output.float(),sentiment), 2)
+        output = F.relu(output.float())
         output, hidden = self.gru(output, hidden)
         output = self.softmax(self.out(output[0]))
         return output, hidden
 
     def initHidden(self, batch_size=config.batch_size):
-        return torch.zeros(2*self.num_layers, batch_size, self.hidden_size+2, device=config.device)
+        return torch.zeros(2*self.num_layers, batch_size, self.hidden_size, device=config.device)
+        # return torch.zeros(2*self.num_layers, batch_size, self.hidden_size+2, device=config.device)
 
 class Seq2Seq(nn.Module):
     def __init__(self, input_size, output_size):
@@ -69,7 +74,7 @@ class Seq2Seq(nn.Module):
         assert self.encoder.hidden_size == self.decoder.hidden_size, \
             "Hidden dimensions of encoder and decoder must be equal!"
 
-    def forward(self, input, sentiment, batch_size=config.batch_size, max_length=config.max_length):
+    def forward(self, input, sentiment=None, batch_size=config.batch_size, max_length=config.max_length):
         '''
         input = input tensor
         '''
@@ -78,7 +83,8 @@ class Seq2Seq(nn.Module):
         input_length = max_length
         target_length = max_length
 
-        encoder_outputs = torch.zeros(max_length, batch_size, 2*(self.encoder.hidden_size+2), device=self.device)
+        encoder_outputs = torch.zeros(max_length, batch_size, 2*(self.encoder.hidden_size), device=self.device)
+        # encoder_outputs = torch.zeros(max_length, batch_size, 2*(self.encoder.hidden_size+2), device=self.device)
 
         # print(input_length)
         for ei in range(input_length):

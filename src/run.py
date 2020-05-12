@@ -93,6 +93,7 @@ if __name__ == '__main__':
         try: 
             checkpoint = torch.load(config.model_save_path)
             model.load_state_dict(checkpoint['model'])
+            print('Model loaded.')
         except:
             pass
 
@@ -105,6 +106,7 @@ if __name__ == '__main__':
         optimizer = optim.Adam(model.parameters())
         try:
             optimizer.load_state_dict(checkpoint['optimizer'])
+            print('Optimizer loaded.')
         except:
             pass
 

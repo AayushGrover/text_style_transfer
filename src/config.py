@@ -13,10 +13,11 @@ train = True
 
 epochs = 10
 # dropout = 0.8
-num_layers = 2
+num_layers = 1
 hidden_size = 64
-ckpt_num = 2
-model_save_path = '../models/sentence_bert_factor_initial(0.9)_step(0.1)_limit(0.5).pt'
+ckpt_num = 1
+# model_save_path = '../models/sentence_bert_factor_initial(0.9)_step(0.1)_limit(0.5).pt'
+model_save_path = '../models/seq2seq_factor_initial(0.9)_step(0.1)_limit(0.5).pt'
 batch_size = 4
 max_length = 512
 bert_dim = 768
