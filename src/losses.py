@@ -6,7 +6,7 @@ def loss_semantic(tokens_input, tokens_generated, sentence_bert):
     cls_input = sentence_bert.generate_batch_sentence_embedding(tokens_input)
     cls_generated = sentence_bert.generate_batch_sentence_embedding(tokens_generated)
     cos = nn.CosineSimilarity(dim=1)
-    return cos(cls_input, cls_generated)
+    return -1 * cos(cls_input, cls_generated)
 
 def loss_sentiment(tokens_target, tokens_predicted, sent_analyser):
     # Cross entropy needs the target as the target class
