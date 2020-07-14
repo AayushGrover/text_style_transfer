@@ -9,7 +9,7 @@ bert_pretrained_weights = 'bert-base-uncased'
 sentence_bert_pretrained = 'bert-base-nli-stsb-mean-tokens' # suited for semantic textual similarity
 glove_path = '../embeddings/glove.6B'
 SENTIMENTS = {'POSITIVE': 0, 'NEGATIVE': 1} # setup enumeration for both the sentiments
-train = True
+train = False
 
 epochs = 10
 # dropout = 0.8

@@ -66,19 +66,17 @@ def train(model, train_dl, optimizer, epochs=config.epochs):
     writer.close()
 
 def test(model, test_dl):
-    for i, input_token_seq in enumerate(test_dl):
+    sent_analyser = SentimentAnalysisUtil()
+    
+    for input_token_seq in tqdm(test_dl):
+        
+        input_token_seq = input_token_seq.squeeze() #[batch_size, max_len]
+        input_sentiment_embeddings = sent_analyser.get_target_sentiment_vectors(input_token_seq)
         input_token_seq = input_token_seq.squeeze().t() #[max_len, batch_size]
-        output_seq = model(input_token_seq) #[max_len, batch_size]
 
-        # print("Batch Number:", i+1)
-        # print("-"*20)
-        # print("Input sentiment embeddings:")
-        # print(input_sentiment_embeddings)
-        # print("-"*20)
-        # print("Produced sentences:\n")
-        # print(sentences)
-        # print("-"*20)
-        # input()
+        output_seq = model(input_token_seq, input_sentiment_embeddings).t() #[batch_size, max_len]
+        for row in output_seq:
+            print(row)
 
 if __name__ == '__main__':
     train_dataset = IMDBDataset(path=config.train_path)
@@ -114,7 +112,9 @@ if __name__ == '__main__':
             train_dl=train_dl,
             optimizer=optimizer)
     else:
-        #model.load_state_dict(torch.load(config.model_save_path))
+        model.load_state_dict(torch.load(config.model_save_path))
+        print('Model loaded.')
+
         model.to(config.device)
         model.eval()
         test(model=model,
